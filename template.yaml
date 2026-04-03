@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Calendar Utils - ICS file generator with API key authentication
+
+Globals:
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
+      AllowMethods: "'POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,x-api-key'"
+
+Resources:
+
+  IcsStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: cal.360balancedliving.com
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  IcsStorageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref IcsStorageBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadIcsFiles
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/events/*"
+
+  GenerateIcsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: calendar-utils-generate-ics
+      Runtime: python3.12
+      Handler: app.lambda_handler
+      CodeUri: backend/
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          ICS_BUCKET_NAME: !Ref IcsStorageBucket
+          ICS_BASE_URL: !Sub "https://${IcsStorageBucket}.s3.amazonaws.com"
+          LOG_LEVEL: INFO
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref IcsStorageBucket
+      Events:
+        GenerateIcs:
+          Type: Api
+          Properties:
+            Path: /generate-ics
+            Method: post
+            RestApiId: !Ref CalendarApi
+
+  CalendarApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,x-api-key'"
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          UsagePlanName: calendar-utils-usage-plan
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${CalendarApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/generate-ics"
+  ApiKeyId:
+    Description: "API Key ID - retrieve value with: aws apigateway get-api-key --api-key <this-value> --include-value --query value --output text"
+    Value: !Ref CalendarApiApiKey
+  IcsBucketName:
+    Description: S3 bucket for ICS files
+    Value: !Ref IcsStorageBucket

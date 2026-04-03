@@ -1,0 +1,144 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: #333;
+  width: 380px;
+}
+
+.container {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #1a73e8;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.status.error {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+.status.loading {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+
+.status.success {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.hidden {
+  display: none;
+}
+
+.event-preview {
+  margin-top: 12px;
+}
+
+.detail {
+  font-size: 13px;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.detail .label {
+  font-weight: 600;
+  color: #555;
+}
+
+.btn-primary {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #1557b0;
+}
+
+.btn-primary:disabled {
+  background: #a8c7fa;
+  cursor: not-allowed;
+}
+
+.results {
+  margin-top: 16px;
+}
+
+.result-group {
+  margin-bottom: 12px;
+}
+
+.result-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.input-row input,
+.input-row textarea {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  resize: none;
+}
+
+.btn-copy {
+  padding: 8px 12px;
+  background: #f1f3f4;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: #e8eaed;
+}
+
+.btn-copy.copied {
+  background: #e6f4ea;
+  color: #137333;
+  border-color: #137333;
+}

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Calendar Link Generator",
+  "version": "1.0.0",
+  "description": "Generate shareable Add-to-Calendar links from Google Calendar and LinkedIn events",
+  "permissions": ["activeTab"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://calendar.google.com/*"],
+      "js": ["content-gcal.js"]
+    },
+    {
+      "matches": ["https://www.linkedin.com/events/*"],
+      "js": ["content-linkedin.js"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

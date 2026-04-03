@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Calendar Link Generator</h1>
+
+    <div id="status" class="status"></div>
+
+    <div id="event-preview" class="event-preview hidden">
+      <h2 id="event-title"></h2>
+      <div class="detail"><span class="label">When:</span> <span id="event-when"></span></div>
+      <div class="detail" id="event-location-row"><span class="label">Where:</span> <span id="event-location"></span></div>
+      <div class="detail" id="event-description-row"><span class="label">Details:</span> <span id="event-description"></span></div>
+
+      <button id="generate-btn" class="btn-primary">Generate Link</button>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="result-group">
+        <label for="ics-url">ICS URL</label>
+        <div class="input-row">
+          <input type="text" id="ics-url" readonly>
+          <button class="btn-copy" data-target="ics-url" title="Copy URL">Copy</button>
+        </div>
+      </div>
+
+      <div class="result-group">
+        <label for="html-snippet">HTML Snippet</label>
+        <div class="input-row">
+          <textarea id="html-snippet" readonly rows="3"></textarea>
+          <button class="btn-copy" data-target="html-snippet" title="Copy HTML">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
