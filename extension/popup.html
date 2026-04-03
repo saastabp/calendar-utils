@@ -20,20 +20,35 @@
     </div>
 
     <div id="results" class="results hidden">
-      <div class="result-group">
-        <label for="ics-url">ICS URL</label>
-        <div class="input-row">
-          <input type="text" id="ics-url" readonly>
-          <button class="btn-copy" data-target="ics-url" title="Copy URL">Copy</button>
+      <div class="calendar-links">
+        <a id="link-google" class="btn-calendar btn-google" href="#" target="_blank">Add to Google</a>
+        <a id="link-outlook" class="btn-calendar btn-outlook" href="#" target="_blank">Add to Outlook</a>
+        <div class="ics-row">
+          <a id="link-ics" class="btn-calendar btn-ics hidden" href="#" target="_blank">Download .ics</a>
+          <div class="toggle-row">
+            <span class="toggle-label">Include .ics</span>
+            <label class="switch">
+              <input type="checkbox" id="ics-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 
       <div class="result-group">
-        <label for="html-snippet">HTML Snippet</label>
-        <div class="input-row">
-          <textarea id="html-snippet" readonly rows="3"></textarea>
-          <button class="btn-copy" data-target="html-snippet" title="Copy HTML">Copy</button>
+        <div class="snippet-header">
+          <label>Paste into email</label>
+          <div class="toggle-row">
+            <span class="toggle-label">Raw HTML</span>
+            <label class="switch">
+              <input type="checkbox" id="raw-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
+        <div id="rich-preview" class="rich-preview"></div>
+        <textarea id="html-snippet" class="hidden" readonly rows="3"></textarea>
+        <button id="btn-copy-rich" class="btn-copy-rich">Copy for Email</button>
       </div>
     </div>
   </div>

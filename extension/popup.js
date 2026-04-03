@@ -125,6 +125,7 @@ async function handleGenerate() {
 
     const result = await response.json();
     log("API response:", result);
+    generateBtn.textContent = "Done";
     showResults(result);
   } catch (err) {
     logError("API call failed", err);
@@ -138,11 +139,78 @@ function showResults(result) {
   generateBtn.classList.add("hidden");
   resultsEl.classList.remove("hidden");
 
-  document.getElementById("ics-url").value = result.ics_url;
-  document.getElementById("html-snippet").value = result.html_snippet;
+  document.getElementById("link-google").href = result.google_url;
+  document.getElementById("link-outlook").href = result.outlook_url;
+  document.getElementById("link-ics").href = result.ics_url;
 
-  document.querySelectorAll(".btn-copy").forEach((btn) => {
-    btn.addEventListener("click", handleCopy);
+  const icsLink = document.getElementById("link-ics");
+  const icsToggle = document.getElementById("ics-toggle");
+  const richPreview = document.getElementById("rich-preview");
+  const htmlSnippet = document.getElementById("html-snippet");
+  const copyBtn = document.getElementById("btn-copy-rich");
+  const rawToggle = document.getElementById("raw-toggle");
+
+  // Build snippet HTML based on ics toggle state
+  function buildSnippet(includeIcs) {
+    let html = '<b>Add to Calendar:</b> '
+      + `<a href="${result.google_url}">Google</a> | `
+      + `<a href="${result.outlook_url}">Outlook</a>`;
+    if (includeIcs) {
+      html += ` | <a href="${result.ics_url}">Download .ics</a>`;
+    }
+    return html;
+  }
+
+  function updateSnippet() {
+    const html = buildSnippet(icsToggle.checked);
+    richPreview.innerHTML = html;
+    htmlSnippet.value = html;
+  }
+
+  updateSnippet();
+
+  icsToggle.addEventListener("change", () => {
+    icsLink.classList.toggle("hidden", !icsToggle.checked);
+    updateSnippet();
+  });
+
+  rawToggle.addEventListener("change", () => {
+    if (rawToggle.checked) {
+      richPreview.classList.add("hidden");
+      htmlSnippet.classList.remove("hidden");
+      copyBtn.textContent = "Copy HTML";
+    } else {
+      richPreview.classList.remove("hidden");
+      htmlSnippet.classList.add("hidden");
+      copyBtn.textContent = "Copy for Email";
+    }
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      const currentHtml = buildSnippet(icsToggle.checked);
+      if (rawToggle.checked) {
+        await navigator.clipboard.writeText(currentHtml);
+      } else {
+        const blob = new Blob([currentHtml], { type: "text/html" });
+        const textBlob = new Blob([richPreview.textContent], { type: "text/plain" });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": blob,
+            "text/plain": textBlob,
+          }),
+        ]);
+      }
+      copyBtn.textContent = "Copied!";
+      copyBtn.classList.add("copied");
+      setTimeout(() => {
+        copyBtn.textContent = rawToggle.checked ? "Copy HTML" : "Copy for Email";
+        copyBtn.classList.remove("copied");
+      }, 2000);
+    } catch (err) {
+      logError("Clipboard write failed", err);
+      copyBtn.textContent = "Failed";
+    }
   });
 }
 

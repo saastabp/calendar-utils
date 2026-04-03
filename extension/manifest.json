@@ -3,7 +3,8 @@
   "name": "Calendar Link Generator",
   "version": "1.0.0",
   "description": "Generate shareable Add-to-Calendar links from Google Calendar and LinkedIn events",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "clipboardWrite"],
+  "host_permissions": ["https://*.execute-api.us-east-1.amazonaws.com/*", "https://*.360balancedliving.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

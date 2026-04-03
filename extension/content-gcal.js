@@ -41,8 +41,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 function scrapeEventData() {
   // Strategy 1: Event detail bubble/popup (clicking an event on the calendar)
-  const bubble = document.querySelector('[data-eventid]')
-    || document.querySelector('[role="dialog"]');
+  // Use the stable dialog with data-chips-dialog attribute
+  const bubble = document.querySelector('[role="dialog"][data-chips-dialog="true"]');
 
   if (bubble) {
     return scrapeFromBubble(bubble);
@@ -62,7 +62,14 @@ function scrapeFromBubble(bubble) {
   const location = extractLocation(bubble);
   const description = extractDescription(bubble);
 
-  if (!title || !start) return null;
+  if (!title) {
+    log("Could not extract title from bubble");
+    return null;
+  }
+  if (!start) {
+    log("Could not extract start date/time from bubble");
+    return null;
+  }
 
   return { title, start, end, timezone, location, description };
 }
@@ -86,17 +93,16 @@ function scrapeFromEventPage() {
 }
 
 function extractTitle(container) {
-  // The event title is typically the most prominent text / heading in the bubble
+  // Google Calendar uses a heading with id="rAECCd" inside the bubble
   const candidates = [
-    container.querySelector('[data-eventid]')?.getAttribute("aria-label"),
+    container.querySelector('#rAECCd')?.textContent,
     container.querySelector('span[role="heading"]')?.textContent,
-    container.querySelector('[data-eventid] span')?.textContent,
-    container.querySelector('h1, h2, h3')?.textContent,
+    container.querySelector('[data-eventid]')?.getAttribute("aria-label"),
   ];
 
   for (const c of candidates) {
     if (c && c.trim()) {
-      // aria-label often contains "Event: Title, date...", extract just the title
+      // aria-label may contain "Event: Title, date...", extract just the title
       const cleaned = c.replace(/^Event:\s*/i, "").split(/,\s*\d/).shift();
       return cleaned.trim();
     }
@@ -107,29 +113,48 @@ function extractTitle(container) {
 function extractDateTime(container) {
   const result = { start: "", end: "", timezone: guessTimezone() };
 
-  // Look for elements with date/time info via aria-labels
-  const timeEl = container.querySelector('time, [data-datestring], [aria-label*="to"]');
-  if (timeEl) {
-    const label = timeEl.getAttribute("aria-label") || timeEl.textContent || "";
-    const parsed = parseDateTimeString(label);
-    if (parsed) return { ...parsed, timezone: result.timezone };
-  }
+  // Google Calendar puts date/time in the #xDetDlgWhen container
+  // Format examples:
+  //   "Saturday, April 4⋅6:00 – 9:00pm"
+  //   "Saturday, April 4⋅6:00am – 9:00pm"
+  //   "Friday, April 3, 2026"  (all-day event)
+  //   "April 4 – 5, 2026" (multi-day)
+  const whenEl = container.querySelector('#xDetDlgWhen');
+  const whenText = whenEl ? whenEl.textContent.trim() : "";
+  log("When text:", whenText);
 
-  // Fallback: scan all text nodes for date-like patterns
-  const allText = container.textContent || "";
-  const dateMatch = allText.match(
-    /(\w+day,\s+\w+\s+\d+,\s+\d{4})\s+(\d{1,2}:\d{2}\s*[AP]M)\s*(?:[–-]\s*(\d{1,2}:\d{2}\s*[AP]M))?/i
+  if (!whenText) return result;
+
+  // Try: "DayName, Month Day⋅StartTime – EndTime" (same day, with times)
+  // The ⋅ or · separator may appear, or just whitespace
+  const sameDay = whenText.match(
+    /(?:\w+day,\s+)?(\w+\s+\d+)(?:,\s*(\d{4}))?[⋅·,\s]+(\d{1,2}(?::\d{2})?\s*(?:[ap]m)?)\s*[–\-]\s*(\d{1,2}(?::\d{2})?\s*(?:[ap]m)?)/i
   );
 
-  if (dateMatch) {
-    const dateStr = dateMatch[1];
-    const startTime = dateMatch[2];
-    const endTime = dateMatch[3] || "";
+  if (sameDay) {
+    const dateStr = sameDay[1]; // "April 4"
+    const year = sameDay[2] || new Date().getFullYear();
+    let startTime = sameDay[3].trim(); // "6:00" or "6:00am"
+    let endTime = sameDay[4].trim();   // "9:00pm"
 
-    result.start = toISODateTime(dateStr, startTime);
-    if (endTime) {
-      result.end = toISODateTime(dateStr, endTime);
+    // If start time has no am/pm, infer from end time
+    if (!/[ap]m/i.test(startTime) && /[ap]m/i.test(endTime)) {
+      const endSuffix = endTime.match(/[ap]m/i)[0];
+      startTime += endSuffix;
     }
+
+    result.start = toISODateTime(`${dateStr}, ${year}`, startTime);
+    result.end = toISODateTime(`${dateStr}, ${year}`, endTime);
+    return result;
+  }
+
+  // Try: all-day event "DayName, Month Day" or "DayName, Month Day, Year"
+  const allDay = whenText.match(/(?:\w+day,\s+)?(\w+\s+\d+)(?:,\s*(\d{4}))?/);
+  if (allDay) {
+    const dateStr = allDay[1];
+    const year = allDay[2] || new Date().getFullYear();
+    result.start = toISODateTime(`${dateStr}, ${year}`, "12:00am");
+    return result;
   }
 
   return result;
@@ -156,12 +181,24 @@ function extractDateTimeFromPage() {
 }
 
 function extractLocation(container) {
-  const locEl = container.querySelector('[data-location], [aria-label*="Location"]');
-  if (locEl) return locEl.textContent.trim();
+  // Google Calendar uses #xDetDlgLoc for location
+  const locEl = container.querySelector('#xDetDlgLoc');
+  if (locEl) {
+    // Get venue name and address separately, join them
+    const parts = [];
+    locEl.querySelectorAll('.UfeRlc, .AzuXid').forEach((el) => {
+      const text = el.textContent.trim();
+      // Skip the "Location:" label
+      if (text && !text.startsWith("Location:")) {
+        parts.push(text);
+      }
+    });
+    if (parts.length > 0) return parts.join(", ");
+  }
 
-  // Look for map links or address-like text
-  const mapLink = container.querySelector('a[href*="maps.google"]');
-  if (mapLink) return mapLink.textContent.trim();
+  // Fallback
+  const fallback = container.querySelector('[aria-label*="Location"], [data-location]');
+  if (fallback) return fallback.textContent.trim();
 
   return "";
 }
@@ -187,10 +224,15 @@ function parseDateTimeString(str) {
 
 function toISODateTime(dateStr, timeStr) {
   try {
-    const combined = `${dateStr.trim()} ${timeStr.trim()}`;
+    // Normalize time: ensure space before am/pm for Date.parse compatibility
+    const normalizedTime = timeStr.trim().replace(/(\d)(am|pm)/i, "$1 $2");
+    const combined = `${dateStr.trim()} ${normalizedTime}`;
+    log("Parsing date/time:", combined);
     const d = new Date(combined);
-    if (isNaN(d.getTime())) return "";
-    // Format as local ISO without timezone offset
+    if (isNaN(d.getTime())) {
+      log("Failed to parse date/time string:", combined);
+      return "";
+    }
     const pad = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
   } catch (err) {
