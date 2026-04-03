@@ -23,3 +23,6 @@ Thumbs.db
 
 # Environment
 .env
+
+# Extension config (contains API key)
+extension/config.js
