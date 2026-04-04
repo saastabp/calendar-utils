@@ -15,6 +15,24 @@ PREFIX = "events/"
 
 
 def lambda_handler(event, context):
+    """
+    Handles the cleanup process for expired objects in an S3 bucket by checking their metadata tags
+    and deleting objects that are past their specified expiration date. The function logs the
+    status of the operation and returns the count of total checked and deleted objects.
+
+    :param event: The AWS Lambda event data received when the function is triggered. Typically,
+                  this contains details about the event source and event parameters.
+    :type event: dict
+
+    :param context: The AWS Lambda context object that provides runtime information about the
+                    Lambda function's execution. Includes information such as function name,
+                    request ID, and memory limits.
+    :type context: object
+
+    :return: A dictionary with the counts of objects checked and deleted during the cleanup
+             process.
+    :rtype: dict
+    """
     try:
         now = datetime.now(timezone.utc)
         deleted = 0
