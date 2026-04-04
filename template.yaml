@@ -50,6 +50,12 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref IcsStorageBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObjectTagging
+                - s3:GetObjectTagging
+              Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/*"
       Events:
         GenerateIcs:
           Type: Api
@@ -57,6 +63,34 @@ Resources:
             Path: /generate-ics
             Method: post
             RestApiId: !Ref CalendarApi
+
+  CleanupExpiredIcsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: calendar-utils-cleanup-expired-ics
+      Runtime: python3.12
+      Handler: cleanup.lambda_handler
+      CodeUri: backend/
+      MemorySize: 128
+      Timeout: 60
+      Environment:
+        Variables:
+          ICS_BUCKET_NAME: !Ref IcsStorageBucket
+          LOG_LEVEL: INFO
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref IcsStorageBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObjectTagging
+              Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/*"
+      Events:
+        CleanupExpired:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(1 day)
+            Description: Daily cleanup of expired ICS files
 
   CalendarApi:
     Type: AWS::Serverless::Api

@@ -23,7 +23,7 @@ def lambda_handler(event, context):
         _validate(body)
 
         ics_bytes = _generate_ics(body)
-        ics_url = _upload_to_s3(ics_bytes)
+        ics_url = _upload_to_s3(ics_bytes, body)
         google_url = _build_google_url(body)
         outlook_url = _build_outlook_url(body)
         html_snippet = _build_html_snippet(ics_url, google_url, outlook_url)
@@ -112,18 +112,31 @@ def _generate_ics(body):
     return cal.to_ical()
 
 
-def _upload_to_s3(ics_bytes):
+def _upload_to_s3(ics_bytes, body):
+    from datetime import timedelta
+
     bucket = os.environ["ICS_BUCKET_NAME"]
     base_url = os.environ["ICS_BASE_URL"]
     key = f"events/{uuid.uuid4()}.ics"
+
+    # Expire 7 days after the event ends
+    end_str = body.get("end") or body["start"]
+    event_end = datetime.fromisoformat(end_str)
+    expires = event_end + timedelta(days=7)
+    # Ensure timezone-aware for S3
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    expires_iso = expires.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     s3.put_object(
         Bucket=bucket,
         Key=key,
         Body=ics_bytes,
         ContentType="text/calendar",
+        Tagging=f"expires={expires_iso}",
     )
-    logger.info("Uploaded to s3://%s/%s", bucket, key)
+    logger.info("Uploaded to s3://%s/%s (expires %s)", bucket, key, expires_iso)
     return f"{base_url}/{key}"
 
 

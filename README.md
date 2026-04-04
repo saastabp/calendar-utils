@@ -9,6 +9,7 @@ Click an event, generate shareable links for Google Calendar, Outlook, and .ics 
 - **Extension**: Manifest V3 Chrome extension that scrapes event data from Google Calendar and LinkedIn event pages
 - **Backend**: AWS Lambda (Python 3.12) behind API Gateway with API key auth
 - **Storage**: S3 bucket (`cal.360balancedliving.com`) for hosting .ics files
+- **Cleanup**: EventBridge-scheduled Lambda runs daily to delete expired .ics files (tagged with expiration 7 days after event end)
 
 ## Setup
 
@@ -68,6 +69,7 @@ aws apigateway get-api-key --api-key <ApiKeyId> --include-value
 .
 ├── backend/
 │   ├── app.py              # Lambda handler - generates .ics, Google/Outlook URLs
+│   ├── cleanup.py          # Scheduled Lambda - deletes expired .ics files from S3
 │   └── requirements.txt
 ├── extension/
 │   ├── manifest.json
