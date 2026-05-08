@@ -156,7 +156,7 @@ function showResults(result) {
       + `<a href="${result.google_url}">Google</a> | `
       + `<a href="${result.outlook_url}">Outlook</a>`;
     if (includeIcs) {
-      html += ` | <a href="${result.ics_url}">Download .ics</a>`;
+      html += ` | <a href="${result.ics_url}">iCal</a>`;
     }
     return html;
   }
