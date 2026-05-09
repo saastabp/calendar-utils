@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import traceback
 import uuid
 from datetime import datetime, timezone
@@ -205,15 +206,27 @@ def _upload_to_s3(ics_bytes, body):
 
     expires_iso = expires.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    download_name = _sanitize_filename(body.get("title")) + ".ics"
+
     s3.put_object(
         Bucket=bucket,
         Key=key,
         Body=ics_bytes,
         ContentType="text/calendar",
+        ContentDisposition=f'attachment; filename="{download_name}"',
         Tagging=f"expires={expires_iso}",
     )
     logger.info("Uploaded to s3://%s/%s (expires %s)", bucket, key, expires_iso)
     return f"{base_url}/{key}"
+
+
+def _sanitize_filename(title):
+    """Sanitize an event title for use in a Content-Disposition filename."""
+    if not title:
+        return "event"
+    cleaned = re.sub(r'[\x00-\x1f"\\/:*?<>|]+', "_", title).strip(" ._")
+    cleaned = re.sub(r"\s+", " ", cleaned)[:80]
+    return cleaned or "event"
 
 
 def _to_utc_compact(dt_str, tz_str):
