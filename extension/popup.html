@@ -21,29 +21,29 @@
 
     <div id="results" class="results hidden">
       <div class="calendar-links">
-        <a id="link-google" class="btn-calendar btn-google" href="#" target="_blank">Add to Google</a>
-        <a id="link-outlook" class="btn-calendar btn-outlook" href="#" target="_blank">Add to Outlook</a>
-        <div class="ics-row">
-          <a id="link-ics" class="btn-calendar btn-ics" href="#" target="_blank">Add to iCal</a>
-          <div class="toggle-row">
-            <span class="toggle-label">Include iCal</span>
-            <label class="switch">
-              <input type="checkbox" id="ics-toggle" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
+        <button id="btn-copy-google" class="btn-calendar btn-google btn-copy-url" data-url-type="google">Copy Google URL</button>
+        <button id="btn-copy-outlook" class="btn-calendar btn-outlook btn-copy-url" data-url-type="outlook">Copy Outlook URL</button>
+        <button id="btn-copy-ics" class="btn-calendar btn-ics btn-copy-url" data-url-type="ics">Copy iCal URL</button>
       </div>
 
       <div class="result-group">
         <div class="snippet-header">
           <label>Paste into email</label>
-          <div class="toggle-row">
-            <span class="toggle-label">Raw HTML</span>
-            <label class="switch">
-              <input type="checkbox" id="raw-toggle">
-              <span class="slider"></span>
-            </label>
+          <div class="toggles-group">
+            <div class="toggle-row">
+              <span class="toggle-label">Include iCal</span>
+              <label class="switch">
+                <input type="checkbox" id="ics-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Raw HTML</span>
+              <label class="switch">
+                <input type="checkbox" id="raw-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
         </div>
         <div id="rich-preview" class="rich-preview"></div>

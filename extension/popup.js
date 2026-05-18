@@ -139,18 +139,37 @@ function showResults(result) {
   generateBtn.classList.add("hidden");
   resultsEl.classList.remove("hidden");
 
-  document.getElementById("link-google").href = result.google_url;
-  document.getElementById("link-outlook").href = result.outlook_url;
-  document.getElementById("link-ics").href = result.ics_url;
+  const urlsByType = {
+    google: result.google_url,
+    outlook: result.outlook_url,
+    ics: result.ics_url,
+  };
 
-  const icsLink = document.getElementById("link-ics");
+  document.querySelectorAll(".btn-copy-url").forEach((btn) => {
+    const type = btn.dataset.urlType;
+    const originalText = btn.textContent;
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(urlsByType[type]);
+        btn.classList.add("copied");
+        btn.textContent = "Copied!";
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        logError(`Copy ${type} URL failed`, err);
+        btn.textContent = "Failed";
+      }
+    });
+  });
+
   const icsToggle = document.getElementById("ics-toggle");
   const richPreview = document.getElementById("rich-preview");
   const htmlSnippet = document.getElementById("html-snippet");
   const copyBtn = document.getElementById("btn-copy-rich");
   const rawToggle = document.getElementById("raw-toggle");
 
-  // Build snippet HTML based on ics toggle state
   function buildSnippet(includeIcs) {
     let html = '<b>Add to Calendar:</b> '
       + `<a href="${result.google_url}">Google</a> | `
@@ -169,10 +188,7 @@ function showResults(result) {
 
   updateSnippet();
 
-  icsToggle.addEventListener("change", () => {
-    icsLink.classList.toggle("hidden", !icsToggle.checked);
-    updateSnippet();
-  });
+  icsToggle.addEventListener("change", updateSnippet);
 
   rawToggle.addEventListener("change", () => {
     if (rawToggle.checked) {

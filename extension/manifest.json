@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Calendar Link Generator",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Generate shareable Add-to-Calendar links from Google Calendar and LinkedIn events",
   "permissions": ["activeTab", "clipboardWrite"],
   "host_permissions": ["https://*.execute-api.us-east-1.amazonaws.com/*", "https://*.360balancedliving.com/*"],

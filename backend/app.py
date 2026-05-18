@@ -345,7 +345,7 @@ def _build_outlook_url(body):
     }
     if body.get("location"):
         params["location"] = body["location"]
-    if body.get("body"):
+    if body.get("description"):
         params["body"] = body["description"]
 
     qs = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())

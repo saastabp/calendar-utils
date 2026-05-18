@@ -11,6 +11,8 @@ Globals:
 
 Resources:
 
+  # Legacy bucket: retained so .ics URLs already sent out keep resolving (with
+  # the cert warning users already see). New writes go to IcsStorageBucketV2.
   IcsStorageBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -33,6 +35,91 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/events/*"
 
+  IcsStorageBucketV2:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: cal-360balancedliving-ics-b7k3m9
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  IcsStorageBucketV2Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref IcsStorageBucketV2
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${IcsStorageBucketV2}/events/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${IcsDistribution}"
+
+  IcsCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: cal.360balancedliving.com
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: cal.360balancedliving.com
+          HostedZoneId: Z08490251WV9146J97IRG
+
+  IcsOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-ics-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  IcsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Calendar Utils ICS files
+        Aliases:
+          - cal.360balancedliving.com
+        PriceClass: PriceClass_100
+        HttpVersion: http2
+        Origins:
+          - Id: ics-bucket-origin
+            DomainName: !GetAtt IcsStorageBucketV2.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt IcsOriginAccessControl.Id
+        DefaultCacheBehavior:
+          TargetOriginId: ics-bucket-origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          # Managed-CachingOptimized policy (AWS-defined, static ID)
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        ViewerCertificate:
+          AcmCertificateArn: !Ref IcsCertificate
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+
+  IcsDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: Z08490251WV9146J97IRG
+      Name: cal.360balancedliving.com
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt IcsDistribution.DomainName
+        # CloudFront's global hosted zone ID (constant across all AWS accounts)
+        HostedZoneId: Z2FDTNDATAQYW2
+        EvaluateTargetHealth: false
+
   GenerateIcsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -44,18 +131,18 @@ Resources:
       Timeout: 10
       Environment:
         Variables:
-          ICS_BUCKET_NAME: !Ref IcsStorageBucket
-          ICS_BASE_URL: !Sub "https://${IcsStorageBucket}.s3.amazonaws.com"
+          ICS_BUCKET_NAME: !Ref IcsStorageBucketV2
+          ICS_BASE_URL: https://cal.360balancedliving.com
           LOG_LEVEL: INFO
       Policies:
         - S3CrudPolicy:
-            BucketName: !Ref IcsStorageBucket
+            BucketName: !Ref IcsStorageBucketV2
         - Statement:
             - Effect: Allow
               Action:
                 - s3:PutObjectTagging
                 - s3:GetObjectTagging
-              Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/*"
+              Resource: !Sub "arn:aws:s3:::${IcsStorageBucketV2}/*"
       Events:
         GenerateIcs:
           Type: Api
@@ -75,16 +162,16 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
-          ICS_BUCKET_NAME: !Ref IcsStorageBucket
+          ICS_BUCKET_NAME: !Ref IcsStorageBucketV2
           LOG_LEVEL: INFO
       Policies:
         - S3CrudPolicy:
-            BucketName: !Ref IcsStorageBucket
+            BucketName: !Ref IcsStorageBucketV2
         - Statement:
             - Effect: Allow
               Action:
                 - s3:GetObjectTagging
-              Resource: !Sub "arn:aws:s3:::${IcsStorageBucket}/*"
+              Resource: !Sub "arn:aws:s3:::${IcsStorageBucketV2}/*"
       Events:
         CleanupExpired:
           Type: ScheduleV2
@@ -114,5 +201,14 @@ Outputs:
     Description: "API Key ID - retrieve value with: aws apigateway get-api-key --api-key <this-value> --include-value --query value --output text"
     Value: !Ref CalendarApiApiKey
   IcsBucketName:
-    Description: S3 bucket for ICS files
+    Description: S3 bucket for new ICS files (private, served via CloudFront)
+    Value: !Ref IcsStorageBucketV2
+  LegacyIcsBucketName:
+    Description: Legacy S3 bucket retained for previously distributed .ics URLs
     Value: !Ref IcsStorageBucket
+  IcsPublicUrl:
+    Description: Public base URL for new ICS files
+    Value: https://cal.360balancedliving.com
+  CloudFrontDistributionDomain:
+    Description: CloudFront distribution domain (Route53 ALIAS target)
+    Value: !GetAtt IcsDistribution.DomainName
